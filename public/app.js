@@ -169,9 +169,98 @@ async function loadInstructorData() {
 
 let assignments = [];
 
+async function deleteAssignment(assignmentId) {
+    if (!confirm('Are you sure you want to delete this assignment? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/assignments.php?id=${assignmentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.headers.get('content-type')?.includes('application/json')) {
+            const data = await response.json();
+            if (response.ok) {
+                alert('Assignment deleted successfully');
+                loadAssignments();
+            } else {
+                alert(`Failed to delete assignment: ${data.message}`);
+            }
+        } else {
+            if (response.ok) {
+                alert('Assignment deleted successfully');
+                loadAssignments();
+            } else {
+                const text = await response.text();
+                console.log('Response text:', text);
+                alert('Failed to delete assignment. Please try again.');
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        location.reload();
+        alert('The page will be refreshed to reflect any changes.');
+    }
+}
+
+async function updateDueDate(assignmentId, currentDueDate) {
+    const assignment = assignments.find(a => a.id == assignmentId);
+    if (!assignment) {
+        alert('Assignment not found');
+        return;
+    }
+
+    const newDueDate = prompt("Enter new due date (YYYY-MM-DD):", currentDueDate.split(' ')[0]);
+    
+    if (!newDueDate) return;
+    
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDueDate)) {
+        alert('Please enter the date in YYYY-MM-DD format');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/assignments.php`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id: assignmentId,
+                title: assignment.title,
+                description: assignment.description,
+                due_date: newDueDate + ' 00:00:00',
+                max_score: assignment.max_score
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('Due date updated successfully');
+            loadAssignments();  
+        } else {
+            throw new Error(data.message || 'Failed to update due date');
+        }
+    } catch (error) {
+        loadAssignments();
+        //console.error('Error:', error);
+        //alert(error.message || 'An error occurred. Please try again.');
+    }
+}
+
 async function loadAssignments() {
     try {
-        const response = await fetch(`${API_URL}/assignments.php`);
+        // instructor인 경우에만 통계 정보를 포함하여 요청
+        const url = currentUser.role === 'instructor' 
+            ? `${API_URL}/assignments.php?with_stats=true`
+            : `${API_URL}/assignments.php`;
+            
+        const response = await fetch(url);
         assignments = await response.json();
         const studentAssignments = document.getElementById('studentAssignments').getElementsByTagName('tbody')[0];
         const instructorAssignments = document.getElementById('instructorAssignments').getElementsByTagName('tbody')[0];
@@ -195,11 +284,25 @@ async function loadAssignments() {
                     </tr>`;
                 assignmentSelect.innerHTML += `<option value="${assignment.id}">${assignment.title}</option>`;
             } else {
+                const averageScore = assignment.average_score 
+                    ? parseFloat(assignment.average_score).toFixed(2)
+                    : 'No grading submissions';
+                const submissionCount = assignment.submission_count || 0;
+                
                 instructorAssignments.innerHTML += ` 
                     <tr>
-                        <td>${assignment.title}</td>
+                        <td>${assignment.title}</td> 
                         <td>${assignment.due_date}</td>
                         <td>${assignment.max_score}</td>
+                        <td>
+                            ${averageScore}
+                            <br>
+                            <small>(${submissionCount} submissions)</small>
+                        </td>
+                        <td>
+                            <button onclick="deleteAssignment(${assignment.id})" class="delete-btn">Delete</button>
+                            <button onclick="updateDueDate(${assignment.id}, '${assignment.due_date}')" class="update-btn">Update Due Date</button>
+                        </td>
                     </tr>`;
             }
         }
@@ -213,6 +316,7 @@ async function loadAssignments() {
         alert('Failed to load assignments. Please try again.');
     }
 }
+
 
 function showAssignmentDescription() {
     const assignmentId = document.getElementById('assignmentSelect').value;
@@ -529,8 +633,6 @@ function removeTestCase(button) {
     button.parentElement.remove();
 }
 
-
-
 async function gradeSubmission(submissionId) {
     console.log('Starting grading process for submission:', submissionId);
     try {
@@ -575,8 +677,9 @@ async function gradeSubmission(submissionId) {
 
             if (updateResponse.ok) {
                 alert(`Submission graded successfully. Score: ${score}`);
-                loadSubmissionsToGrade();
-                loadAllSubmissionsForInstructor();
+                await loadSubmissionsToGrade();
+                await loadAllSubmissionsForInstructor();
+                location.reload();
             } else {
                 const updateData = await updateResponse.json();
                 console.error('Update response data:', updateData);

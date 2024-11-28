@@ -55,6 +55,33 @@
             background-color: #2980b9;
         }
 
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+
+        .update-btn {
+            background-color: #ffc107;
+            color: black;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .update-btn:hover {
+            background-color: #ffb300;
+        }
+
         /* Layout */
         .form-container {
             background-color: white;
@@ -261,12 +288,14 @@
                 <button onclick="createAssignment()">Create Assignment</button>
             </div>
             <h3>All Assignments</h3>
-            <table id="instructorAssignments">
+            <table id="instructorAssignments"> 
                 <thead>
                     <tr>
                         <th>Assignment</th>
                         <th>Due Date</th>
                         <th>Max Score</th>
+                        <th>Average Score</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody></tbody>

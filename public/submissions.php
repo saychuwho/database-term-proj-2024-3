@@ -19,7 +19,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         handleSubmissionCreation($submission);
         break;
 
-    case 'GET':
+    case 'GET': 
         if (isset($_GET['all']) && $_GET['all'] === 'true' && $_SESSION['role'] === 'instructor') {
             // 모든 제출물 가져오기 (교수자만 가능)
             $results = $submission->getAllSubmissions();

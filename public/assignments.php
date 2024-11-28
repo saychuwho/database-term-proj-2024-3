@@ -19,7 +19,12 @@ switch ($_SERVER['REQUEST_METHOD']) {
             $isInstructor = isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'instructor';
             $result = $assignment->getById($_GET['id'], $isInstructor);
             echo json_encode($result);
-        } else {
+        } 
+        else if (isset($_GET['with_stats'])) {  
+            $result = $assignment->getAllWithAverageScores();
+            echo json_encode($result);
+        }
+        else {
             $result = $assignment->getAll();
             echo json_encode($result);
         }
@@ -40,22 +45,37 @@ switch ($_SERVER['REQUEST_METHOD']) {
     case 'PUT':
         requireRole('instructor');
         $data = json_decode(file_get_contents('php://input'), true);
-        if ($assignment->update($data['id'], $data['title'], $data['description'], $data['due_date'], $data['max_score'])) {
-            echo json_encode(['message' => 'Assignment updated successfully']);
+        if (isset($data['id']) && isset($data['title']) && isset($data['description']) 
+            && isset($data['due_date']) && isset($data['max_score'])) {
+            if ($assignment->update($data['id'], $data['title'], $data['description'], 
+                                    $data['due_date'], $data['max_score'])) {
+                echo json_encode(['message' => 'Assignment updated successfully']);
+            } else {
+                http_response_code(500);
+                echo json_encode(['message' => 'Error updating assignment']);
+            }
         } else {
-            http_response_code(500);
-            echo json_encode(['message' => 'Error updating assignment']);
+            http_response_code(400);
+            echo json_encode(['message' => 'Missing required fields']);
         }
         break;
 
     case 'DELETE':
         requireRole('instructor');
         $id = $_GET['id'] ?? null;
-        if ($id && $assignment->delete($id)) {
-            echo json_encode(['message' => 'Assignment deleted successfully']);
-        } else {
+        try {
+            if ($id && $assignment->delete($id)) {
+                header('Content-Type: application/json');
+                echo json_encode(['message' => 'Assignment deleted successfully']);
+            } else {
+                http_response_code(500);
+                header('Content-Type: application/json');
+                echo json_encode(['message' => 'Error deleting assignment']);
+            }
+        } catch (Exception $e) {
             http_response_code(500);
-            echo json_encode(['message' => 'Error deleting assignment']);
+            header('Content-Type: application/json');
+            echo json_encode(['message' => $e->getMessage()]);
         }
         break;
 

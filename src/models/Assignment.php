@@ -32,6 +32,19 @@ class Assignment {
         }
     }
 
+    public function getAllWithAverageScores() {
+        $query = "SELECT 
+                    a.*,
+                    AVG(s.score) as average_score,
+                    COUNT(s.id) as submission_count
+                FROM assignments a
+                LEFT JOIN submissions s ON a.id = s.assignment_id
+                GROUP BY a.id
+                ORDER BY a.due_date";
+        $stmt = $this->db->query($query);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getAll() {
         $query = "SELECT * FROM assignments ORDER BY due_date";
         $stmt = $this->db->query($query);
